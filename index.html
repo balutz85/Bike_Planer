@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Bike Wind Planner</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+background:linear-gradient(180deg,#071524,#12345a);
+color:white;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:20px;
+}
+
+header{
+margin-bottom:20px;
+}
+
+header p{
+color:#f4c76b;
+}
+
+.hero-card{
+
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+
+padding:25px;
+
+background:rgba(255,255,255,.08);
+
+border-radius:30px;
+
+border:1px solid rgba(244,199,107,.2);
+
+backdrop-filter:blur(10px);
+
+margin-bottom:25px;
+}
+
+.hero-title{
+letter-spacing:3px;
+font-size:.8rem;
+color:#f4c76b;
+margin-bottom:10px;
+}
+
+.big-number{
+font-size:5rem;
+font-weight:700;
+color:#f4c76b;
+}
+
+.hero-icon{
+font-size:6rem;
+}
+
+#bestStars{
+margin-top:10px;
+color:#ffd95f;
+font-size:1.4rem;
+}
+
+#bestScore{
+font-size:1.2rem;
+margin-bottom:10px;
+}
+
+#bestTemp,
+#bestRain,
+#bestDistance,
+#bestRideTime{
+margin-top:5px;
+}
+
+#bestText{
+margin-top:15px;
+opacity:.9;
+}
+
+.target-grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:15px;
+margin-bottom:25px;
+}
+
+.target-card{
+background:rgba(255,255,255,.06);
+padding:20px;
+border-radius:20px;
+text-align:center;
+}
+
+.forecast{
+background:rgba(255,255,255,.06);
+padding:20px;
+border-radius:25px;
+}
+
+.forecast-day{
+background:rgba(255,255,255,.05);
+padding:15px;
+border-radius:15px;
+margin-top:10px;
+}
+
+.day-head{
+display:flex;
+justify-content:space-between;
+}
+
+.day-info{
+margin-top:8px;
+font-size:.9rem;
+}
+
+.progress{
+height:10px;
+background:#1d3557;
+border-radius:99px;
+margin-top:10px;
+overflow:hidden;
+}
+
+.progress-fill{
+height:100%;
+}
+
+.green{
+background:#2ecc71;
+}
+
+.yellow{
+background:#f1c40f;
+}
+
+.orange{
+background:#e67e22;
+}
+
+.red{
+background:#e74c3c;
+}
+
+@media(max-width:700px){
+
+.hero-card{
+flex-direction:column;
+gap:20px;
+}
+
+.target-grid{
+grid-template-columns:1fr;
+}
+
+.hero-icon{
+font-size:4rem;
+}
+
+.big-number{
+font-size:4rem;
+}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>🚴 Bike Wind Planner</h1>
+        <p>Schernberg · Kyffhäuserkreis</p>
+    </header>
+
+    <section class="hero-card">
+
+        <div>
+
+            <div class="hero-title">
+                BESTE TOUR DER NÄCHSTEN 7 TAGE
+            </div>
+
+            <h2 id="bestDestination">
+                Lade Daten...
+            </h2>
+
+            <div id="bestDay"></div>
+
+            <div id="bestWind" class="big-number">
+                --
+            </div>
+
+            <div id="bestWindDirection">
+                ↘ Rückenwind
+            </div>
+
+            <div id="bestStars">
+                ★★★★★
+            </div>
+
+            <div id="bestScore">
+                --
+            </div>
+
+            <div id="bestTemp">
+                --
+            </div>
+
+            <div id="bestRain">
+                --
+            </div>
+
+            <div id="bestDistance">
+                --
+            </div>
+
+            <div id="bestRideTime">
+                --
+            </div>
+
+            <p id="bestText">
+                Lade Wetterdaten...
+            </p>
+
+        </div>
+
+        <div id="bestIcon" class="hero-icon">
+            ☀️
+        </div>
+
+    </section>
+
+
+    <section class="forecast">
+
+        <h2>7-Tage Prognose</h2>
+
+        <div id="forecastList"></div>
+
+    </section>
+
+
+
+    <section class="ranking">
+
+        <h2>🏆 Zielübersicht</h2>
+
+        <div class="target-grid">
+
+            <div class="target-card">
+                <h3>Dortmund</h3>
+                <div id="scoreDortmund">1582 hm</div>
+                <small>337 km</small>
+            </div>
+
+            <div class="target-card">
+                <h3>Dresden</h3>
+                <div id="scoreDresden">1421 hm</div>
+                <small>312 km</small>
+            </div>
+
+            <div class="target-card">
+                <h3>Würzburg</h3>
+                <div id="scoreWuerzburg">3872 hm</div>
+                <small>280 km</small>
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+<script>
+
+const BASE_SPEED = 22;
+
+const TARGETS = [
+{
+name:"Dortmund",
+distance:337,
+bearing:284
+},
+{
+name:"Dresden",
+distance:312,
+bearing:118
+},
+{
+name:"Würzburg",
+distance:280,
+bearing:208
+}
+];
+
+function weatherIcon(code){
+
+if(code===0) return "☀️";
+
+if([1,2].includes(code))
+return "🌤️";
+
+if(code===3)
+return "☁️";
+
+if([51,53,55,61,63,65,80,81,82].includes(code))
+return "🌧️";
+
+if([95,96,99].includes(code))
+return "⛈️";
+
+return "🌥️";
+}
+
+function windArrow(deg){
+
+const windTo=(deg+180)%360;
+
+const arrows=[
+"↑","↗","→","↘",
+"↓","↙","←","↖"
+];
+
+return arrows[
+Math.round(windTo/45)%8
+];
+}
+
+function directionScore(
+windDir,
+bearing
+){
+
+const windTo=
+(windDir+180)%360;
+
+let diff=
+Math.abs(
+windTo-bearing
+);
+
+if(diff>180)
+diff=360-diff;
+
+return Math.max(
+0,
+100-diff
+);
+}
+
+function scoreColor(score){
+
+if(score>=85) return "green";
+if(score>=70) return "yellow";
+if(score>=50) return "orange";
+
+return "red";
+}
+
+function stars(score){
+
+if(score>=90) return "★★★★★";
+if(score>=75) return "★★★★☆";
+if(score>=60) return "★★★☆☆";
+if(score>=40) return "★★☆☆☆";
+
+return "★☆☆☆☆";
+}
+
+function rideTime(distance,score){
+
+let factor=1;
+
+if(score>90) factor=1.15;
+else if(score>75) factor=1.08;
+else if(score<40) factor=.8;
+else if(score<60) factor=.9;
+
+const speed=
+BASE_SPEED*factor;
+
+const h=
+distance/speed;
+
+const hours=
+Math.floor(h);
+
+const mins=
+Math.round(
+(h-hours)*60
+);
+
+return `${hours}h ${mins}min`;
+}
+
+async function loadWeather(){
+
+const url=
+"https://api.open-meteo.com/v1/forecast?latitude=51.3262838&longitude=10.7735367&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant&forecast_days=7&timezone=Europe/Berlin";
+
+const response=
+await fetch(url);
+
+const data=
+await response.json();
+
+render(data);
+}
+
+function render(data){
+
+const list=
+document.getElementById(
+"forecastList"
+);
+
+let best=null;
+
+for(let i=0;i<7;i++){
+
+const tempMax=
+data.daily.temperature_2m_max[i];
+
+const tempMin=
+data.daily.temperature_2m_min[i];
+
+const rain=
+data.daily.precipitation_probability_max[i];
+
+const rainMm=
+data.daily.precipitation_sum[i];
+
+const wind=
+data.daily.wind_speed_10m_max[i];
+
+const windDir=
+data.daily.wind_direction_10m_dominant[i];
+
+const weather=
+data.daily.weather_code[i];
+
+const day=
+new Date(
+data.daily.time[i]
+);
+
+const weekday=
+day.toLocaleDateString(
+"de-DE",
+{weekday:"long"}
+);
+
+let winner=null;
+let bestScore=-999;
+
+TARGETS.forEach(target=>{
+
+let score=0;
+
+score+=
+directionScore(
+windDir,
+target.bearing
+)*0.6;
+
+score+=
+Math.min(
+wind*2,
+100
+)*0.2;
+
+score-=
+rain*0.25;
+
+score-=
+rainMm*2;
+
+if(
+tempMax>=15 &&
+tempMax<=25
+){
+score+=10;
+}
+
+if(tempMax>30){
+score-=10;
+}
+
+if(score>bestScore){
+
+bestScore=score;
+winner=target;
+}
+
+});
+
+bestScore=
+Math.round(bestScore);
+
+if(
+best===null ||
+bestScore>best.score
+){
+
+best={
+score:bestScore,
+day:weekday,
+target:winner,
+wind,
+tempMin,
+tempMax,
+rain,
+arrow:
+windArrow(windDir),
+icon:
+weatherIcon(weather)
+};
+}
+
+list.innerHTML+=`
+
+<div class="forecast-day">
+
+<div class="day-head">
+
+<strong>
+${weekday}
+·
+${winner.name}
+</strong>
+
+<strong>
+${bestScore}
+</strong>
+
+</div>
+
+<div class="day-info">
+
+${weatherIcon(weather)}
+
+${tempMin}°/${tempMax}°
+
+·
+
+${windArrow(windDir)}
+
+${Math.round(wind)} km/h
+
+·
+
+☔ ${rain}%
+
+·
+
+${rainMm.toFixed(1)} mm
+
+</div>
+
+<div class="progress">
+
+<div
+class="progress-fill ${scoreColor(bestScore)}"
+style="width:${bestScore}%">
+</div>
+
+</div>
+
+</div>
+
+`;
+
+}
+
+document
+.getElementById(
+"bestDestination"
+)
+.innerText=
+best.target.name;
+
+document
+.getElementById(
+"bestDay"
+)
+.innerText=
+best.day;
+
+document
+.getElementById(
+"bestWind"
+)
+.innerText=
+Math.round(best.wind);
+
+document
+.getElementById(
+"bestWindDirection"
+)
+.innerText=
+best.arrow+
+" Rückenwind";
+
+document
+.getElementById(
+"bestStars"
+)
+.innerText=
+stars(best.score);
+
+document
+.getElementById(
+"bestScore"
+)
+.innerText=
+best.score+
+" Punkte";
+
+document
+.getElementById(
+"bestTemp"
+)
+.innerText=
+`🌡 ${best.tempMin}° / ${best.tempMax}°`;
+
+document
+.getElementById(
+"bestRain"
+)
+.innerText=
+`☔ ${best.rain}%`;
+
+document
+.getElementById(
+"bestDistance"
+)
+.innerText=
+`📏 ${best.target.distance} km`;
+
+document
+.getElementById(
+"bestRideTime"
+)
+.innerText=
+`🚴 ${rideTime(
+best.target.distance,
+best.score
+)}`;
+
+document
+.getElementById(
+"bestIcon"
+)
+.innerText=
+best.icon;
+
+document
+.getElementById(
+"bestText"
+)
+.innerText=
+`Beste Bedingungen für eine Tour nach ${best.target.name}.`;
+}
+
+loadWeather();
+
+</script>
+
+</body>
+</html>
